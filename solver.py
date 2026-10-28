@@ -15,10 +15,26 @@ class VariableCounter:
         self.variables_count += 1
         return self.variables_count
 
+edges = []
+for edge in lines[1:]:
+    edge = edge.split()
+    edges.append((int(edge[0]), int(edge[1])))
+
 # edge_vars is a list of propositional variables
 # edge_vars[i] := "is the i-th edge in the tree?"
 edge_vars = []
 vc = VariableCounter();
+while (len(edge_vars) != len(edges)):
+    edge_vars.append(vc.next_var())
+
+# generate a list of variables of edges incident to a vertex
+# with this list comprehention: [edge_var[i] for i in incident[v]]
+incident = [[] for _ in range(vertices_count)]
+for i, (u, v) in enumerate(edges):
+    incident[u].append(i)
+    incident[v].append(i)
+
+edges_incident_to_vertices = [[edge_vars[i] for i in incident[v]] for v in range(vertices_count)]
 
 #################################
 ### VERTEX DEGREE ENFORCEMENT ###
@@ -28,8 +44,6 @@ vc = VariableCounter();
 # we have to order the edges, incident to a vertex v in some way, so 
 # current edges is a list of such edges, ordered in some way 
 # degree_vars[v][j][i] := "from j first edges adjacent to v, are at least i of them in the ST?"
-current_edges = []
-degree_vars = []
 
 # one could think about this verification process as a dynamic programming problem
 # with the "table" dp and e[i] := "is i-th edge in a ST?"
@@ -55,4 +69,52 @@ degree_vars = []
 # check if (not dp[deg(v)][k+1]) holds in the end
 # if it does, the node satisfies the degree constraint
 
+# use the fact that p -> q ~ (not p) or q
 
+# dp[j][i] <- dp[j - 1][i] or (dp[j - 1][i - 1] and e[j]) ~
+# dp[j][i] or ((not dp[j - 1][i]) and (not (dp[j - 1][i - 1]) or (not e[j]))) ~
+# (dp[j][i] or (not dp[j - 1][i])) and (dp[j][i] or not (dp[j - 1][i - 1]) or (not e[j])) 
+# which gives two clauses per implication, add that for all the related 
+# propositional variables, also enforce dp[0][0] to be true and dp[deg(v)][k+1]
+# to be false (by adding clause with just the variable for dp[0][0] and
+# one with negation of dp[deg(v)][k+1]) one pair for every vertex
+
+degree_vars = {}
+for v in range(vertices_count):
+    if len(edges_incident_to_vertices[v]) <= degree_constraint:
+        continue
+    for j in range(len(edges_incident_to_vertices[v]) + 1):
+        for i in range(degree_constraint + 2):
+            degree_vars[(v, j, i)] = vc.next_var()
+
+clauses = []
+for v in range(vertices_count):
+    v_degree = len(edges_incident_to_vertices[v])
+    if v_degree <= degree_constraint:
+        continue
+    clauses.append([degree_vars[v, 0, 0]])
+    clauses.append([-degree_vars[v, v_degree, degree_constraint + 1]])
+    for j in range(1, v_degree + 1):
+        for i in range(degree_constraint + 2):
+            clauses.append([degree_vars[v, j, i], -degree_vars[v, j - 1, i]])
+            if i - 1 >= 0:
+                clauses.append([degree_vars[v, j, i], -degree_vars[v, j - 1, i - 1], -edges_incident_to_vertices[v][j - 1]])
+
+clauses.append([1])
+clauses.append([2])
+clauses.append([3])
+clauses.append([4])
+
+with open("formula.cnf", "w") as out:
+    out.write(f"p cnf {vc.variables_count} {len(clauses)}\n")
+    for clause in clauses:
+        out.write(" ".join(map(str, clause)) + " 0\n")
+
+
+
+
+
+
+
+
+        
