@@ -36,9 +36,9 @@ for i, (u, v) in enumerate(edges):
 
 edges_incident_to_vertices = [[edge_vars[i] for i in incident[v]] for v in range(vertices_count)]
 
-#################################
-### VERTEX DEGREE ENFORCEMENT ###
-#################################
+###########################################
+######## VERTEX DEGREE ENFORCEMENT ########
+###########################################
 
 # degree_vars is a set of propositional variables for degree constraint enforcement
 # we have to order the edges, incident to a vertex v in some way, so 
@@ -61,7 +61,8 @@ edges_incident_to_vertices = [[edge_vars[i] for i in incident[v]] for v in range
 # dp[j][i] <- dp[j - 1][i] or (dp[j - 1][i - 1] and e[j])
 # it will allow some invalid assignments to pass through the
 # implications part of the formula, but they will fail
-# the (not dp[deg(v)][k+1]) clause
+# the (not dp[deg(v)][k+1]) clause, and we get half the number 
+# of clauses
 
 # so in a group of clauses, that handles the degree constraint, there 
 # will be subgroup, handling each vertex
@@ -100,10 +101,87 @@ for v in range(vertices_count):
             if i - 1 >= 0:
                 clauses.append([degree_vars[v, j, i], -degree_vars[v, j - 1, i - 1], -edges_incident_to_vertices[v][j - 1]])
 
-clauses.append([1])
-clauses.append([2])
-clauses.append([3])
-clauses.append([4])
+##########################################
+######## CONNECTIVITY ENFORCEMENT ########
+##########################################
+
+# a graph is connected, if, and only if there is a path
+# from some vertex to another one, for every two pairs,
+# however, we are dealing with undirected graphs, so checking
+# connectivity of just one vertex with every other is sufficient
+
+# procedurally, that would mean inductively checking if every 
+# vertex u is adjacent to v, or if u is adjacent to some node,
+# that is reachable from v, let us translate it into logical formulas
+
+# a naive dp[i] <-> dp[adj[i][0]] or ... or dp[adj[i][n]] will fail,
+# because dp[i] and dp[j] can just "satisfy each other", if they 
+# are connected, without actually being reachable from 0
+
+# solution is basically BFS
+# dp[i][s] := "is i reachable from 0 in s or less steps?"
+# let adj[i][j] be the j-th vertex of the graph, adjacent to i
+# e[i][j] := "is an edge by which j-th neighbour is connected to i in the tree?"
+# dp[i][s] <-> dp[i][s - 1] or (dp[adj[i][0]][s - 1] and e[i][0]) or ... or
+#              (dp[adj[i][deg(i) - 1]][s - 1] and e[i][deg(i) - 1])
+
+# dp[i][s] -> dp[i][s - 1] or (dp[adj[i][0]][s - 1] and e[i][0]) or ... or
+#             (dp[adj[i][deg(i) - 1]][s - 1] and e[i][deg(i) - 1])
+# is sufficient, because the invalid states it allows undercount the connectedness
+# (dp[i][s] can be false, while the RHS expression is true, but this is 
+# harmless, because it will never say a graph is connected on a disconnected graph,
+# unlike the "<-", because it can conclude connectedness on a disconnected graph)
+
+# you can see how simple distribution will make the formula blow up exponentially
+# with respect to clauses, if simple distributive law is used to 
+# convert into CNF
+
+# introduce a variable c[i][j][s - 1] <-> (dp[adj[i][j]][s - 1] and e[i][j])
+# just the "->" is enough
+
+# c[i][j][s - 1] -> (dp[adj[i][j]][s - 1] and e[i][j]) ~
+# (not c[i][j][s - 1]) or (dp[adj[i][j]][s - 1] and e[i][j]) ~
+# ((not c[i][j][s - 1]) or dp[adj[i][j]][s - 1]) and ((not c[i][j][s - 1]) or e[i][j])
+
+# so (not dp[i][s]) or dp[i][s - 1] or c[i][0][s - 1] or ... or c[i][deg(i) - 1][s - 1]
+
+connected = {}
+for i in range(vertices_count):
+    for j in range(len(edges_incident_to_vertices[i])):
+        for s in range(vertices_count): # longest path has (vertices_count - 1) edges
+            connected[(i, j, s)] = vc.next_var()
+
+reachable = {}
+for i in range(vertices_count):
+    for s in range(vertices_count):
+        reachable[(i, s)] = vc.next_var()
+
+for i in range(1, vertices_count):
+    clauses.append([-reachable[i, 0]])
+
+for i in range(vertices_count):
+    for j in range(len(edges_incident_to_vertices[i])):
+        for s in range(vertices_count): 
+            u = edges[incident[i][j]][0]
+            v = edges[incident[i][j]][1]
+            neighbour = v if u == i else u
+            clauses.append([-connected[i, j, s], reachable[neighbour, s]])
+            clauses.append([-connected[i, j, s], edges_incident_to_vertices[i][j]])
+
+clauses.append([reachable[0, 0]])
+for i in range(vertices_count):
+    for s in range(1, vertices_count): 
+        clause = []
+        if s - 1 >= 0:
+            clause.append(-reachable[i, s])
+            clause.append(reachable[i, s - 1])
+            for j in range(len(edges_incident_to_vertices[i])):
+                clause.append(connected[i, j, s - 1])
+        clauses.append(clause)
+
+for i in range(vertices_count):
+    clauses.append([reachable[i, vertices_count - 1]])
+
 
 with open("formula.cnf", "w") as out:
     out.write(f"p cnf {vc.variables_count} {len(clauses)}\n")
@@ -117,4 +195,4 @@ with open("formula.cnf", "w") as out:
 
 
 
-        
+
