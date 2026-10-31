@@ -1,3 +1,7 @@
+import subprocess
+import sys
+from collections import deque
+
 with open("in.txt") as in_file:
     lines = in_file.read().splitlines()
 
@@ -188,11 +192,39 @@ with open("formula.cnf", "w") as out:
     for clause in clauses:
         out.write(" ".join(map(str, clause)) + " 0\n")
 
+result = subprocess.run(["./glucose-simp", "-model", "-verb=0", "formula.cnf"], capture_output=True, text=True)
 
+if result.returncode == 20:
+    print("No spanning tree with maximum degree", degree_constraint)
+    sys.exit()
 
+true_vars = set()
+for line in result.stdout.splitlines():
+    if not line.startswith("v "):
+        continue
+    for literal in line[2:].split():
+        value = int(literal)
+        if value > 0:
+            true_vars.add(value)
 
+chosen = [edge for index, edge in enumerate(edges) if index + 1 in true_vars]
 
+neighbours = [[] for _ in range(vertices_count)]
+for a, b in chosen:
+    neighbours[a].append(b)
+    neighbours[b].append(a)
 
+visited = [False] * vertices_count
+visited[0] = True
+queue = deque([0])
+tree = []
+while queue:
+    current = queue.popleft()
+    for neighbour in neighbours[current]:
+        if not visited[neighbour]:
+            visited[neighbour] = True
+            tree.append((current, neighbour))
+            queue.append(neighbour)
 
-
-
+for a, b in tree:
+    print(a, b)
