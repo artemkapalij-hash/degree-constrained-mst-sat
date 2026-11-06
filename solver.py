@@ -192,7 +192,13 @@ with open("formula.cnf", "w") as out:
     for clause in clauses:
         out.write(" ".join(map(str, clause)) + " 0\n")
 
-result = subprocess.run(["./glucose-simp", "-model", "-verb=0", "formula.cnf"], capture_output=True, text=True)
+result = subprocess.run(["./glucose-simp", "-model", "-verb=1", "formula.cnf"], capture_output=True, text=True)
+print()
+print("###########################################################################################################")
+print("############################################### GLUCOSE OUT ###############################################")
+print("###########################################################################################################")
+print()
+print(result.stdout)
 
 if result.returncode == 20:
     print("No spanning tree with maximum degree", degree_constraint)
@@ -226,5 +232,19 @@ while queue:
             tree.append((current, neighbour))
             queue.append(neighbour)
 
+print("###########################################################################################################")
+print("########################################### HUMAN-READABLE OUT ############################################")
+print("###########################################################################################################")
+print()
+
+print(f"{vertices_count} vertices, {edges_count} edges, max degree {dergree_constraint}")
+
+print()
+print("Edges:")
+for line in lines[1:]:
+    print(line)
+print()
+
+print("A spanning tree of the given graph is a subgraph with the following edges:")
 for a, b in tree:
     print(a, b)
