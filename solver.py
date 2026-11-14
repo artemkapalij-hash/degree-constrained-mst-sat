@@ -109,10 +109,13 @@ for v in range(vertices_count):
 ######## CONNECTIVITY ENFORCEMENT ########
 ##########################################
 
-# a graph is connected, if, and only if there is a path
-# from some vertex to another one, for every two pairs,
-# however, we are dealing with undirected graphs, so checking
-# connectivity of just one vertex with every other is sufficient
+# a graph is connected if, and only if there is 
+# a path between every two vertices
+
+# in an undirected graph, the condition collapses
+# to: every vertex must be reachable from one specific
+# vertex (denote as r), because a path u->v can be
+# constructed by concatenating u->r and r->v
 
 # procedurally, that would mean inductively checking if every 
 # vertex u is adjacent to v, or if u is adjacent to some node,
@@ -131,7 +134,7 @@ for v in range(vertices_count):
 
 # dp[i][s] -> dp[i][s - 1] or (dp[adj[i][0]][s - 1] and e[i][0]) or ... or
 #             (dp[adj[i][deg(i) - 1]][s - 1] and e[i][deg(i) - 1])
-# is sufficient, because the invalid states it allows undercount the connectedness
+# is sufficient, because the invalid states it allows only UNDERcount the connectedness
 # (dp[i][s] can be false, while the RHS expression is true, but this is 
 # harmless, because it will never say a graph is connected on a disconnected graph,
 # unlike the "<-", because it can conclude connectedness on a disconnected graph)
