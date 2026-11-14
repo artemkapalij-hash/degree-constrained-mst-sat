@@ -1,14 +1,50 @@
 import subprocess
 import sys
 from collections import deque
+from argparse import ArgumentParser
 
-with open("in.txt") as in_file:
+parser = ArgumentParser()
+
+parser.add_argument(
+    "-i",
+    "--input",
+    default="in.txt",
+    type=str,
+    help=(
+        "The instance file."
+    ),
+)
+
+parser.add_argument(
+    "-o",
+    "--output",
+    default="formula.cnf",
+    type=str,
+    help=(
+        "Output file for the DIMACS format (i.e. the CNF formula)."
+    ),
+)
+
+parser.add_argument(
+    "-v",
+    "--verb",
+    default=1,
+    type=int,
+    choices=range(0,2),
+    help=(
+        "Verbosity of the SAT solver used."
+    ),
+)
+
+args = parser.parse_args()
+
+with open(args.input) as in_file:
     lines = in_file.read().splitlines()
 
-vertices_count, edges_count, dergree_constraint = lines[0].split()
+vertices_count, edges_count, degree_constraint = lines[0].split()
 vertices_count = int(vertices_count)
 edges_count = int(edges_count)
-degree_constraint = int(dergree_constraint)
+degree_constraint = int(degree_constraint)
 
 class VariableCounter:
 
@@ -22,13 +58,15 @@ class VariableCounter:
 edges = []
 for edge in lines[1:]:
     edge = edge.split()
+    if len(edge) != 2:
+        continue
     edges.append((int(edge[0]), int(edge[1])))
 
 # edge_vars is a list of propositional variables
 # edge_vars[i] := "is the i-th edge in the tree?"
 edge_vars = []
-vc = VariableCounter();
-while (len(edge_vars) != len(edges)):
+vc = VariableCounter()
+while len(edge_vars) != len(edges):
     edge_vars.append(vc.next_var())
 
 # generate a list of variables of edges incident to a vertex
@@ -114,14 +152,14 @@ for v in range(vertices_count):
 
 # in an undirected graph, the condition collapses
 # to: every vertex must be reachable from one specific
-# vertex (denote as r), because a path u->v can be
-# constructed by concatenating u->r and r->v
+# vertex (denote as 0), because a path u->v can be
+# constructed by concatenating u->0 and 0->v
 
 # procedurally, that would mean inductively checking if every 
 # vertex u is adjacent to v, or if u is adjacent to some node,
 # that is reachable from v, let us translate it into logical formulas
 
-# a naive dp[i] <-> dp[adj[i][0]] or ... or dp[adj[i][n]] will fail,
+# a naive dp[i] <-> dp[adj[i][0]] or ... or dp[adj[i][deg(i) - 1]] will fail,
 # because dp[i] and dp[j] can just "satisfy each other", if they 
 # are connected, without actually being reachable from 0
 
@@ -179,23 +217,22 @@ clauses.append([reachable[0, 0]])
 for i in range(vertices_count):
     for s in range(1, vertices_count): 
         clause = []
-        if s - 1 >= 0:
-            clause.append(-reachable[i, s])
-            clause.append(reachable[i, s - 1])
-            for j in range(len(edges_incident_to_vertices[i])):
-                clause.append(connected[i, j, s - 1])
+        clause.append(-reachable[i, s])
+        clause.append(reachable[i, s - 1])
+        for j in range(len(edges_incident_to_vertices[i])):
+            clause.append(connected[i, j, s - 1])
         clauses.append(clause)
 
 for i in range(vertices_count):
     clauses.append([reachable[i, vertices_count - 1]])
 
 
-with open("formula.cnf", "w") as out:
+with open(args.output, "w") as out:
     out.write(f"p cnf {vc.variables_count} {len(clauses)}\n")
     for clause in clauses:
         out.write(" ".join(map(str, clause)) + " 0\n")
 
-result = subprocess.run(["./glucose-simp", "-model", "-verb=1", "formula.cnf"], capture_output=True, text=True)
+result = subprocess.run(["./glucose-simp", "-model", f"-verb={args.verb}", args.output], capture_output=True, text=True)
 print()
 print("###########################################################################################################")
 print("############################################### GLUCOSE OUT ###############################################")
@@ -206,6 +243,10 @@ print(result.stdout)
 if result.returncode == 20:
     print("No spanning tree with maximum degree", degree_constraint)
     sys.exit()
+
+if result.returncode != 10:
+    print("Solver error")
+    sys.exit(1)
 
 true_vars = set()
 for line in result.stdout.splitlines():
@@ -240,7 +281,7 @@ print("########################################### HUMAN-READABLE OUT ##########
 print("###########################################################################################################")
 print()
 
-print(f"{vertices_count} vertices, {edges_count} edges, max degree {dergree_constraint}")
+print(f"{vertices_count} vertices, {edges_count} edges, max degree {degree_constraint}")
 
 print()
 print("Edges:")
