@@ -15,6 +15,10 @@ an example input is:
 
 The first line represents the number of nodes, edges and the degree constraint accordingly, every next line represents an edge of a given graph.
 
+## Requirements
+
+`glucose-simp` in the currrent directory
+
 ## Encoding
 
 It is divided into two parts, degree and connectivity enforcement

@@ -122,26 +122,33 @@ edges_incident_to_vertices = [[edge_vars[i] for i in incident[v]] for v in range
 # to be false (by adding clause with just the variable for dp[0][0] and
 # one with negation of dp[deg(v)][k+1]) one pair for every vertex
 
-degree_vars = {}
-for v in range(vertices_count):
-    if len(edges_incident_to_vertices[v]) <= degree_constraint:
-        continue
-    for j in range(len(edges_incident_to_vertices[v]) + 1):
-        for i in range(degree_constraint + 2):
-            degree_vars[(v, j, i)] = vc.next_var()
+def at_most_k(variables, k, vc):
+    n = len(variables)
+    if n <= k:
+        return []
+
+    counter_vars = [[vc.next_var() for _ in range(k + 2)] for _ in range(n + 1)] 
+
+    # counter_vars[n][k + 1] means k+1 or more are true, so force it to be false
+    # counter_vars[0][0] means at least zero are selected, which trivially holds
+    clauses = [[counter_vars[0][0]], [-counter_vars[n][k + 1]]] 
+
+    for j in range(1, n + 1):
+        x = variables[j - 1]
+        for i in range(k + 2):
+            clauses.append([counter_vars[j][i], -counter_vars[j - 1][i]])
+            if i - 1 >= 0:
+                clauses.append([counter_vars[j][i], -counter_vars[j - 1][i - 1], -x])
+    return clauses
 
 clauses = []
+
+# to avoid writing any cyclicness checks, just do not consider graphs that have over n - 1
+# edges, since any connected subgraph of n - 1 edges is a spanning tree
+clauses.extend(at_most_k(edge_vars, vertices_count - 1, vc))
+
 for v in range(vertices_count):
-    v_degree = len(edges_incident_to_vertices[v])
-    if v_degree <= degree_constraint:
-        continue
-    clauses.append([degree_vars[v, 0, 0]])
-    clauses.append([-degree_vars[v, v_degree, degree_constraint + 1]])
-    for j in range(1, v_degree + 1):
-        for i in range(degree_constraint + 2):
-            clauses.append([degree_vars[v, j, i], -degree_vars[v, j - 1, i]])
-            if i - 1 >= 0:
-                clauses.append([degree_vars[v, j, i], -degree_vars[v, j - 1, i - 1], -edges_incident_to_vertices[v][j - 1]])
+    clauses.extend(at_most_k(edges_incident_to_vertices[v], degree_constraint, vc))
 
 ##########################################
 ######## CONNECTIVITY ENFORCEMENT ########
@@ -267,14 +274,35 @@ for a, b in chosen:
 visited = [False] * vertices_count
 visited[0] = True
 queue = deque([0])
-tree = []
 while queue:
     current = queue.popleft()
     for neighbour in neighbours[current]:
         if not visited[neighbour]:
             visited[neighbour] = True
-            tree.append((current, neighbour))
             queue.append(neighbour)
+
+if not all(len(x) <= degree_constraint for x in neighbours):
+    print("Bad output:")
+    for a, b in chosen:
+        print(a, b)
+    violating = [v for v, nbrs in enumerate(neighbours) if len(nbrs) > degree_constraint]
+    print(f"Solver error: the produced graph violates the degree constraint ({degree_constraint}) on the vertices {violating}")
+    sys.exit(1)
+
+if len(chosen) != vertices_count - 1:
+    print("Bad output:")
+    for a, b in chosen:
+        print(a, b)
+    print(f"Solver error: the produced graph has {len(chosen)} edges, any spanning tree must have {vertices_count - 1}")
+    sys.exit(1)
+
+if not all(visited):
+    print("Bad output:")
+    for a, b in chosen:
+        print(a, b)
+    unreachable = [i for i, vis in enumerate(visited) if not vis]
+    print(f"Solver error: the produced graph is disconnected, the vertices {unreachable} are unreachable from the vertex 0")
+    sys.exit(1)
 
 print("###########################################################################################################")
 print("########################################### HUMAN-READABLE OUT ############################################")
@@ -290,5 +318,5 @@ for line in lines[1:]:
 print()
 
 print("A spanning tree of the given graph is a subgraph with the following edges:")
-for a, b in tree:
+for a, b in chosen:
     print(a, b)
