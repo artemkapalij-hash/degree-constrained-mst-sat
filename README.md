@@ -49,6 +49,11 @@ dp[j][i] or ((not dp[j - 1][i]) and (not (dp[j - 1][i - 1]) or (not e[j]))) ~
 Which gives two clauses per implication, so the number of clauses is in 
 `O(k|E|)` (where k is the degree constraint).
 
+### Being acyclic
+
+Any connected graph on `|V| - 1` edges that is connected is a tree. The clauses are similar to the ones enforcing the vertex degree.
+Has `O(|V||E|)` clauses
+
 ### Connectivity enforcement
 
 A graph is connected if, and only if there is a path between every two vertices
@@ -126,7 +131,7 @@ But the edges are randomised, so the larger the graph, the longer it takes to ve
 If you want to generate any graph, use 
 
 ```
-./generate_case.py -n <nodes> -e <edges> -c <constraint> in.txt && python3 solver.py -i in.txt -o o
+./generate_case.py -n <nodes> -e <edges> -c <constraint> > in.txt && python3 solver.py -i in.txt -o o
 ```
 
 
