@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import subprocess
 import sys
 from collections import deque
@@ -249,7 +251,7 @@ print(result.stdout)
 
 if result.returncode == 20:
     print("No spanning tree with maximum degree", degree_constraint)
-    sys.exit()
+    sys.exit(1)
 
 if result.returncode != 10:
     print("Solver error")
@@ -320,3 +322,4 @@ print()
 print("A spanning tree of the given graph is a subgraph with the following edges:")
 for a, b in chosen:
     print(a, b)
+sys.exit(0)
