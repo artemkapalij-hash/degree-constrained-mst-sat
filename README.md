@@ -51,7 +51,7 @@ Which gives two clauses per implication, so the number of clauses is in
 
 ### Being acyclic
 
-Any connected graph on `|V| - 1` edges that is connected is a tree. The clauses are similar to the ones enforcing the vertex degree.
+Any connected graph on `|V| - 1` edges is a tree. The clauses are similar to the ones enforcing the vertex degree.
 Has `O(|V||E|)` clauses
 
 ### Connectivity enforcement
@@ -107,23 +107,23 @@ So:
 
 ## Test cases
 
-| Name           | Nodes | Edges | Degree constraint |  Time  |
-|----------------|-------|-------|-------------------|--------|
-| big1-sat.txt   | 100   | 399   | 4                 | 4,811  |
-| big2-sat.txt   | 200   | 999   | 5                 | 21,078 |
-| big3-sat.txt   | 200   | 500   | 10                | 13,277 |
-| big1-unsat.txt | 72    | 221   | 11                | 0,570  |
+| Name           | Nodes | Edges | Degree constraint |  Time   |
+|----------------|-------|-------|-------------------|---------|
+| big1-sat.txt   | 100   | 399   | 4                 | 4,811s  |
+| big2-sat.txt   | 200   | 999   | 5                 | 21,078s |
+| big3-sat.txt   | 200   | 500   | 10                | 13,277s |
+| big1-unsat.txt | 72    | 221   | 11                | 0,570s  |
 
 To generate a satisifiable encoding with a set vertex count, edge count, degree constraint, use:
 
 ```bash
-./generate-satisfiable.sh <nodes> <edges> <degree constraint>
+python3 generate-satisfiable.sh <nodes> <edges> <degree constraint>
 ```
 
 Example:
 
 ```bash
-./generate-satisfiable.sh 200 500 5
+python3 generate-satisfiable.sh 200 500 5
 ```
 
 But the edges are randomised, so the larger the graph, the longer it takes to verify it, and the probability of producing a satisfiable graph decreases
@@ -131,7 +131,11 @@ But the edges are randomised, so the larger the graph, the longer it takes to ve
 If you want to generate any graph, use 
 
 ```
-./generate_case.py -n <nodes> -e <edges> -c <constraint> > in.txt && python3 solver.py -i in.txt -o o
+python3 generate_case.py -n <nodes> -e <edges> -c <constraint> > in.txt && python3 solver.py -i in.txt -o o
 ```
 
+To run on a graph stored in some file:
 
+```
+python3 solver.py -i <path to the input file> -o <output file> -v <verboity of the sat solver (0 or 1)>
+```
