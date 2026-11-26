@@ -17,10 +17,9 @@ The first line represents the number of nodes, edges and the degree constraint a
 
 ## Requirements
 
-`glucose-simp` in the current directory
-(clone https://github.com/audemard/glucose/ and build)
-Python 3.6+
-Bash
+- `glucose-simp` in the current directory (clone https://github.com/audemard/glucose/ and build)
+- Python 3.6+
+- Bash
 
 ## Encoding
 
@@ -122,7 +121,7 @@ So:
 To generate a satisfiable encoding with a set vertex count, edge count, degree constraint, use:
 
 ```bash
-python3 generate-satisfiable.sh <nodes> <edges> <degree constraint>
+bash generate-satisfiable.sh <nodes> <edges> <degree constraint>
 ```
 
 Example:
