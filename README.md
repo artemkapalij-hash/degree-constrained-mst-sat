@@ -17,11 +17,14 @@ The first line represents the number of nodes, edges and the degree constraint a
 
 ## Requirements
 
-`glucose-simp` in the currrent directory
+`glucose-simp` in the current directory
+(clone https://github.com/audemard/glucose/ and build)
+Python 3.6+
+Bash
 
 ## Encoding
 
-It is divided into two parts, degree and connectivity enforcement
+It is divided into three parts, degree, acyclicity and connectivity enforcement
 
 ### Vertex Degree Enforcement
 
@@ -107,6 +110,8 @@ So:
 
 ## Test cases
 
+(Small test cases omitted)
+
 | Name           | Nodes | Edges | Degree constraint |  Time   |
 |----------------|-------|-------|-------------------|---------|
 | big1-sat.txt   | 100   | 399   | 4                 | 4,811s  |
@@ -114,7 +119,7 @@ So:
 | big3-sat.txt   | 200   | 500   | 10                | 13,277s |
 | big1-unsat.txt | 72    | 221   | 11                | 0,570s  |
 
-To generate a satisifiable encoding with a set vertex count, edge count, degree constraint, use:
+To generate a satisfiable encoding with a set vertex count, edge count, degree constraint, use:
 
 ```bash
 python3 generate-satisfiable.sh <nodes> <edges> <degree constraint>
@@ -123,7 +128,7 @@ python3 generate-satisfiable.sh <nodes> <edges> <degree constraint>
 Example:
 
 ```bash
-python3 generate-satisfiable.sh 200 500 5
+bash generate-satisfiable.sh 200 500 5
 ```
 
 But the edges are randomised, so the larger the graph, the longer it takes to verify it, and the probability of producing a satisfiable graph decreases
@@ -137,5 +142,5 @@ python3 generate_case.py -n <nodes> -e <edges> -c <constraint> > in.txt && pytho
 To run on a graph stored in some file:
 
 ```
-python3 solver.py -i <path to the input file> -o <output file> -v <verboity of the sat solver (0 or 1)>
+python3 solver.py -i <path to the input file> -o <output file for CNF formula> -v <verbosity of the sat solver (0 or 1)>
 ```
